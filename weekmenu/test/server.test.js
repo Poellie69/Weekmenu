@@ -101,3 +101,33 @@ test('the share link opens the app page and files outside public are refused', a
   assert.equal((await fetch(`${base}/..%2Fserver.js`)).status, 404);
   assert.equal((await fetch(`${base}/photos/..%2Fweekmenu.json`, { headers: { cookie } })).status, 404);
 });
+
+test('serves the app over https when certificate files are given', async () => {
+  const { readFileSync } = await import('node:fs');
+  const https = await import('node:https');
+  const tls = {
+    cert: readFileSync(new URL('./fixtures/test-cert.pem', import.meta.url)),
+    key: readFileSync(new URL('./fixtures/test-key.pem', import.meta.url)),
+  };
+  const store = await new Store(await fs.mkdtemp(path.join(os.tmpdir(), 'weekmenu-tls-'))).open();
+  const secure = createApp({ store, password: 'geheim', secureCookies: true, tls });
+  await new Promise((r) => secure.listen(0, r));
+  try {
+    const { status, cookie: setCookie } = await new Promise((resolve, reject) => {
+      const req = https.request(
+        { host: '127.0.0.1', port: secure.address().port, path: '/api/login', method: 'POST', rejectUnauthorized: false, headers: { 'content-type': 'application/json' } },
+        (res) => {
+          res.resume();
+          resolve({ status: res.statusCode, cookie: res.headers['set-cookie']?.[0] });
+        },
+      );
+      req.on('error', reject);
+      req.end(JSON.stringify({ password: 'geheim' }));
+    });
+    assert.equal(status, 200);
+    assert.match(setCookie, /; Secure/);
+  } finally {
+    secure.close();
+    await fs.rm(store.dir, { recursive: true, force: true });
+  }
+});

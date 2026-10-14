@@ -1,4 +1,5 @@
 import http from 'node:http';
+import https from 'node:https';
 import fs from 'node:fs/promises';
 import { createReadStream } from 'node:fs';
 import path from 'node:path';
@@ -86,7 +87,7 @@ function ingredientsFrom(body) {
     .filter(Boolean);
 }
 
-export function createApp({ store, password, secureCookies = false, fetchRecipeImpl = fetchRecipe, fetchImageImpl = fetchImage }) {
+export function createApp({ store, password, secureCookies = false, tls = null, fetchRecipeImpl = fetchRecipe, fetchImageImpl = fetchImage }) {
   const sign = (expires) => crypto.createHmac('sha256', store.secret).update(`session:${expires}`).digest('hex');
   const makeToken = () => {
     const expires = Date.now() + SESSION_DAYS * 864e5;
@@ -205,7 +206,7 @@ export function createApp({ store, password, secureCookies = false, fetchRecipeI
     }
   }
 
-  return http.createServer(async (req, res) => {
+  const handler = async (req, res) => {
     const url = new URL(req.url, 'http://local');
     try {
       if (url.pathname.startsWith('/api/')) return await api(req, res, url);
@@ -225,17 +226,32 @@ export function createApp({ store, password, secureCookies = false, fetchRecipeI
       if (status === 500) console.error(e);
       if (!res.headersSent) send(res, status, { error: status === 500 ? 'Something went wrong on the server.' : e.message });
     }
-  });
+  };
+  return tls ? https.createServer(tls, handler) : http.createServer(handler);
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const password = process.env.APP_PASSWORD;
+/** Starts Weekmenu from environment settings (see DOCS.md). */
+export async function main(env = process.env) {
+  const password = env.APP_PASSWORD;
   if (!password) {
     console.error('Set APP_PASSWORD before starting Weekmenu.');
     process.exit(1);
   }
-  const store = await new Store(process.env.DATA_DIR || path.join(ROOT, 'data')).open();
-  const port = Number(process.env.PORT || 3000);
-  createApp({ store, password, secureCookies: process.env.COOKIE_SECURE !== 'false' && process.env.NODE_ENV === 'production' })
-    .listen(port, () => console.log(`Weekmenu is running on http://localhost:${port}`));
+  let tls = null;
+  if (env.SSL_CERT && env.SSL_KEY) {
+    try {
+      tls = { cert: await fs.readFile(env.SSL_CERT), key: await fs.readFile(env.SSL_KEY) };
+    } catch (e) {
+      console.error(`Could not read the certificate files (${e.message}). Check the certificate settings.`);
+      process.exit(1);
+    }
+  }
+  const store = await new Store(env.DATA_DIR || path.join(ROOT, 'data')).open();
+  const port = Number(env.PORT || 3000);
+  const secureCookies = Boolean(tls) || (env.COOKIE_SECURE !== 'false' && env.NODE_ENV === 'production');
+  createApp({ store, password, secureCookies, tls }).listen(port, () =>
+    console.log(`Weekmenu is running on ${tls ? 'https' : 'http'}://localhost:${port}`),
+  );
 }
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) await main();

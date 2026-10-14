@@ -1,0 +1,29 @@
+name: Weekmenu
+version: "0.1.0"
+slug: weekmenu
+description: Plan meals Sunday to Saturday, import recipes from any site, and make one shopping list.
+url: https://github.com/Poellie69/weekmenu
+arch:
+  - aarch64
+  - amd64
+  - armv7
+init: false
+startup: application
+boot: auto
+ports:
+  3000/tcp: 8099
+ports_description:
+  3000/tcp: Weekmenu web app
+webui: "[PROTO:ssl]://[HOST]:[PORT:3000]"
+map:
+  - type: ssl
+options:
+  password: ""
+  ssl: false
+  certfile: fullchain.pem
+  keyfile: privkey.pem
+schema:
+  password: password
+  ssl: bool
+  certfile: str
+  keyfile: str
