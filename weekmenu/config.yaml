@@ -2,7 +2,7 @@ name: Weekmenu
 version: "0.1.0"
 slug: weekmenu
 description: Plan meals Sunday to Saturday, import recipes from any site, and make one shopping list.
-url: https://github.com/Poellie69/weekmenu
+url: https://github.com/Poellie69/Weekmenu
 arch:
   - aarch64
   - amd64
