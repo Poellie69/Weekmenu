@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Weekmenu IJmuiden</title>
+<meta name="theme-color" content="#2f7a4a">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+
+<div class="wrap login" id="login" hidden>
+  <form id="loginform">
+    <h1>Weekmenu</h1>
+    <div class="field"><label for="pw">Password</label><input type="password" id="pw" autocomplete="current-password"></div>
+    <p class="err" id="loginerr" hidden></p>
+    <button class="primary" type="submit">Sign in</button>
+  </form>
+</div>
+
+<div class="wrap" id="app" hidden>
+  <header class="top">
+    <div>
+      <div class="eyebrow" id="weeklabel">Week</div>
+      <h1>Weekmenu IJmuiden</h1>
+    </div>
+    <div class="headbtns">
+      <button class="ghost" id="clearweek">Clear week</button>
+      <button class="ghost" id="settings">Settings</button>
+    </div>
+  </header>
+
+  <section aria-label="This week">
+    <div class="week" id="week"></div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:12px">
+    <div class="bar">
+      <h2>Recipes <span class="muted" id="rcount" style="font-weight:500;font-size:15px"></span></h2>
+      <button id="addrecipe">Add recipe</button>
+    </div>
+    <div class="sources">
+      <span class="eyebrow">Find recipes on</span>
+      <div class="chips" id="sources"></div>
+    </div>
+    <div id="recipes"></div>
+  </section>
+</div>
+
+<div class="fab" id="fab" hidden><button class="primary" id="golist">Make shopping list</button></div>
+<div id="sheetroot"></div>
+<div id="toast" class="toast" hidden></div>
+
+<script type="module" src="/app.js"></script>
+</body>
+</html>
