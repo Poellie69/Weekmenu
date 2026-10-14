@@ -35,6 +35,16 @@ same certificate:
 4. On your phone, open `https://<your-name>.duckdns.org:8099` in Chrome, sign in, then tap the
    menu (⋮) and choose **Install app** or **Add to Home screen**.
 
+### With Tailscale instead of port forwarding
+
+The community add-on **Tailscale with features** can copy its `ts.net` certificate into `/ssl`:
+
+1. In that add-on, turn on `share_homeassistant`, and set `lets_encrypt_certfile` to
+   `ts-fullchain.pem` and `lets_encrypt_keyfile` to `ts-privkey.pem`. Restart it.
+2. In Weekmenu, turn on **ssl** and set `certfile` and `keyfile` to those same names. Restart.
+3. With Tailscale switched on on your phone, open `https://<device>.<tailnet>.ts.net:8099` in Chrome
+   and install the app from there.
+
 ## Options
 
 | Option | Meaning |
