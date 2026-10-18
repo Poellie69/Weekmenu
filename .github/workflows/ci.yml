@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: weekmenu
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm test
+
+  addon-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the add-on image
+        run: docker build -t weekmenu ./weekmenu
+      - name: Start it the way Home Assistant does
+        run: |
+          mkdir -p "$RUNNER_TEMP/data"
+          echo '{"password":"ci","ssl":false,"certfile":"fullchain.pem","keyfile":"privkey.pem"}' > "$RUNNER_TEMP/data/options.json"
+          docker run -d --name weekmenu -p 8099:3000 -v "$RUNNER_TEMP/data:/data" weekmenu
+          for i in $(seq 1 20); do curl -fs http://localhost:8099/api/session && break; sleep 1; done
+          curl -fs http://localhost:8099/api/session | grep -q '"loggedIn":false'
+          curl -fs -o /dev/null http://localhost:8099/manifest.webmanifest
+          docker logs weekmenu

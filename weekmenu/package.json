@@ -1,0 +1,13 @@
+{
+  "name": "weekmenu",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Plan meals Sunday to Saturday, import recipes from any site, and make one shopping list.",
+  "type": "module",
+  "main": "server.js",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test test/*.test.js"
+  }
+}
