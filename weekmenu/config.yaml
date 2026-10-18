@@ -1,5 +1,5 @@
 name: Weekmenu
-version: "0.1.0"
+version: "0.2.0"
 slug: weekmenu
 description: Plan meals Sunday to Saturday, import recipes from any site, and make one shopping list.
 url: https://github.com/Poellie69/Weekmenu
@@ -13,8 +13,11 @@ boot: auto
 ports:
   3000/tcp: 8099
 ports_description:
-  3000/tcp: Weekmenu web app
-webui: "[PROTO:ssl]://[HOST]:[PORT:3000]"
+  3000/tcp: Weekmenu on its own address (needs a password)
+ingress: true
+ingress_port: 8099
+panel_icon: mdi:silverware-fork-knife
+panel_title: Weekmenu
 map:
   - type: ssl
 options:
@@ -23,7 +26,7 @@ options:
   certfile: fullchain.pem
   keyfile: privkey.pem
 schema:
-  password: password
+  password: password?
   ssl: bool
   certfile: str
   keyfile: str

@@ -17,7 +17,7 @@ async function api(method, url, body, headers = {}) {
     body: body ? (isBlob ? body : JSON.stringify(body)) : undefined,
   });
   const data = await res.json().catch(() => ({}));
-  if (res.status === 401 && url !== '/api/login') {
+  if (res.status === 401 && url !== 'api/login') {
     showLogin();
     throw new Error('Please sign in.');
   }
@@ -28,10 +28,10 @@ async function api(method, url, body, headers = {}) {
 let weekTimer = null;
 function saveWeek() {
   clearTimeout(weekTimer);
-  weekTimer = setTimeout(() => api('PUT', '/api/week', state.week).catch((e) => toast(e.message)), 400);
+  weekTimer = setTimeout(() => api('PUT', 'api/week', state.week).catch((e) => toast(e.message)), 400);
 }
 function saveSources() {
-  api('PUT', '/api/sources', { list: state.sources }).catch((e) => toast(e.message));
+  api('PUT', 'api/sources', { list: state.sources }).catch((e) => toast(e.message));
 }
 
 /* ---------- week ---------- */
@@ -65,7 +65,7 @@ function fmtQ(i) {
 /* ---------- render ---------- */
 const recipe = (id) => state.recipes.find((r) => r.id === id);
 function photo(r, cls = 'ph') {
-  if (r.photo) return `<img class="${cls}" alt="" loading="lazy" src="/photos/${esc(r.photo)}">`;
+  if (r.photo) return `<img class="${cls}" alt="" loading="lazy" src="photos/${esc(r.photo)}">`;
   return `<div class="${cls}" aria-hidden="true">${esc(((r.name || '?').trim()[0] || '?').toUpperCase())}</div>`;
 }
 function render() {
@@ -115,7 +115,7 @@ const stepBar = (n) =>
 
 function pickDay(r) {
   openSheet(
-    `${stepBar(2)}${r.photo ? `<img class="detail-photo" alt="" src="/photos/${esc(r.photo)}">` : ''}
+    `${stepBar(2)}${r.photo ? `<img class="detail-photo" alt="" src="photos/${esc(r.photo)}">` : ''}
     <h2>Which day do you want ${esc(r.name)}?</h2>
     <div class="days7">${DAYS.map((d, i) => {
       const o = state.week.days[i] && recipe(state.week.days[i].r);
@@ -146,7 +146,7 @@ function confirmDelete(r) {
       (s.querySelector('#yesdel').onclick = async () => {
         closeSheet();
         try {
-          await api('DELETE', `/api/recipes/${r.id}`);
+          await api('DELETE', `api/recipes/${r.id}`);
           state.recipes = state.recipes.filter((x) => x.id !== r.id);
           for (const k in state.week.days) if (state.week.days[k].r === r.id) delete state.week.days[k];
           render();
@@ -244,7 +244,7 @@ async function importLink(text, title = '') {
   if (!String(text || '').trim()) return toast('Paste a link to a recipe first');
   openSheet(`<div class="importing"><div class="spinner" role="status" aria-label="Importing"></div><h2>Getting the recipe…</h2></div><p class="muted" style="margin:0;overflow-wrap:anywhere">${esc(title || text)}</p>`);
   try {
-    const res = await api('POST', '/api/import', { url: text, title });
+    const res = await api('POST', 'api/import', { url: text, title });
     if (!res.existing) state.recipes.push(res.recipe);
     render();
     if (res.existing) toast('You already have this recipe');
@@ -277,9 +277,9 @@ function recipeSheet(r) {
         btn.disabled = true;
         btn.textContent = 'Saving…';
         try {
-          let saved = r ? await api('PATCH', `/api/recipes/${r.id}`, { name, ingredientsText }) : await api('POST', '/api/recipes', { name, ingredientsText });
+          let saved = r ? await api('PATCH', `api/recipes/${r.id}`, { name, ingredientsText }) : await api('POST', 'api/recipes', { name, ingredientsText });
           const f = s.querySelector('#rphoto').files[0];
-          if (f) saved = await api('PUT', `/api/recipes/${saved.id}/photo`, f, { 'content-type': f.type }).catch((e) => (toast(e.message), saved));
+          if (f) saved = await api('PUT', `api/recipes/${saved.id}/photo`, f, { 'content-type': f.type }).catch((e) => (toast(e.message), saved));
           state.recipes = r ? state.recipes.map((x) => (x.id === saved.id ? saved : x)) : [...state.recipes, saved];
           render();
           closeSheet();
@@ -319,7 +319,15 @@ function addSourceSheet() {
 }
 
 function settingsSheet() {
-  const bm = `javascript:location.href='${location.origin}/share?url='+encodeURIComponent(location.href)+'&title='+encodeURIComponent(document.title)`;
+  if (inHomeAssistant) {
+    return openSheet(
+      `<h2>Settings</h2>
+      <p class="muted" style="margin:0">You are using Weekmenu inside Home Assistant, so no separate sign-in is needed.</p>
+      <p class="muted" style="margin:0">To import recipes with the <strong>Share</strong> button on Android, or with a bookmark on a computer, open Weekmenu at its own https address and look in Settings there. See the add-on's Documentation tab.</p>
+      <div class="row"><button class="primary" data-close>Close</button></div>`,
+    );
+  }
+  const bm = `javascript:location.href='${new URL('share', new URL('./', location.href)).href}?url='+encodeURIComponent(location.href)+'&title='+encodeURIComponent(document.title)`;
   openSheet(
     `<h2>Settings</h2>
     <div class="field"><h3>Import on a computer</h3>
@@ -330,7 +338,7 @@ function settingsSheet() {
     <div class="row"><button class="ghost" id="logout">Sign out</button><button class="primary" data-close>Close</button></div>`,
     (s) =>
       (s.querySelector('#logout').onclick = async () => {
-        await api('POST', '/api/logout').catch(() => {});
+        await api('POST', 'api/logout').catch(() => {});
         closeSheet();
         showLogin();
       }),
@@ -389,7 +397,7 @@ function showLogin() {
 $('#loginform').addEventListener('submit', async (e) => {
   e.preventDefault();
   try {
-    await api('POST', '/api/login', { password: $('#pw').value });
+    await api('POST', 'api/login', { password: $('#pw').value });
     $('#pw').value = '';
     $('#loginerr').hidden = true;
     await start();
@@ -399,22 +407,27 @@ $('#loginform').addEventListener('submit', async (e) => {
   }
 });
 
+let inHomeAssistant = false;
+
 async function start() {
-  const { loggedIn } = await api('GET', '/api/session');
+  const { loggedIn, ingress } = await api('GET', 'api/session');
+  inHomeAssistant = Boolean(ingress);
+  // Inside the Home Assistant sidebar the page lives under a changing address,
+  // so the offline cache and the install/bookmark buttons only make sense outside it.
+  if (!inHomeAssistant && 'serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
   if (!loggedIn) return showLogin();
-  state = await api('GET', '/api/state');
+  state = await api('GET', 'api/state');
   $('#login').hidden = true;
   $('#app').hidden = false;
   $('#fab').hidden = false;
   ensureWeek();
   render();
   // Opened from the Android share sheet or the bookmark button.
-  if (location.pathname === '/share') {
+  if (location.pathname.split('/').pop() === 'share') {
     const q = new URLSearchParams(location.search);
-    history.replaceState(null, '', '/');
+    history.replaceState(null, '', './');
     importLink([q.get('url'), q.get('text')].filter(Boolean).join(' '), q.get('title') || '');
   }
 }
 
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
 start().catch((e) => toast(e.message));

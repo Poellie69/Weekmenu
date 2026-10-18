@@ -14,11 +14,22 @@ and get one shopping list for Albert Heijn or Jumbo.
 
 ## Setting up
 
-1. On the add-on's **Configuration** tab, enter a **password**. You sign in to Weekmenu with it.
-2. Start the add-on and click **Open Web UI**. Weekmenu runs on port **8099**.
+1. Start the add-on and turn on **Show in sidebar**.
+2. Click **Weekmenu** in the Home Assistant menu. It opens right there, also in the
+   Home Assistant app on your phone or tablet, and you don't need a separate password.
 
 Your recipes, week plan and photos are stored in the add-on's own data folder and are
 included in Home Assistant backups.
+
+## Its own address (for the Share button)
+
+The sidebar is all you need for planning. To import recipes with the **Share** button on
+Android, or with a bookmark on a computer, Weekmenu also needs its own address:
+
+1. On the add-on's **Configuration** tab, enter a **password**. You sign in to that address with it.
+2. Restart the add-on. Weekmenu is then also on port **8099**.
+
+Without a password that port stays closed and Weekmenu only opens from the sidebar.
 
 ## Using it on your phone (https)
 
@@ -49,7 +60,7 @@ The community add-on **Tailscale with features** can copy its `ts.net` certifica
 
 | Option | Meaning |
 |---|---|
-| `password` | Password to sign in. Required. |
+| `password` | Password for Weekmenu's own address on port 8099. Leave empty to use only the sidebar. |
 | `ssl` | Serve Weekmenu over https using the certificate in `/ssl`. |
 | `certfile` | Certificate file in `/ssl`. Default `fullchain.pem`. |
 | `keyfile` | Private key file in `/ssl`. Default `privkey.pem`. |

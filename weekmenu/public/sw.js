@@ -1,7 +1,8 @@
 // Keeps the app shell available so Weekmenu opens quickly and can be
 // installed. Recipes and the week plan always come fresh from the server.
-const CACHE = 'weekmenu-shell-v1';
-const SHELL = ['/', '/styles.css', '/app.js', '/manifest.webmanifest', '/icons/icon-192.png'];
+const CACHE = 'weekmenu-shell-v2';
+const BASE = new URL('./', self.location).pathname;
+const SHELL = ['', 'styles.css', 'app.js', 'manifest.webmanifest', 'icons/icon-192.png'].map((p) => BASE + p);
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
@@ -15,9 +16,10 @@ self.addEventListener('activate', (e) => {
 
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
-  if (e.request.method !== 'GET' || url.origin !== location.origin) return;
-  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/photos/')) return;
-  const key = e.request.mode === 'navigate' ? '/' : e.request;
+  if (e.request.method !== 'GET' || url.origin !== location.origin || !url.pathname.startsWith(BASE)) return;
+  const rel = url.pathname.slice(BASE.length);
+  if (rel.startsWith('api/') || rel.startsWith('photos/')) return;
+  const key = e.request.mode === 'navigate' ? BASE : e.request;
   e.respondWith(
     fetch(e.request)
       .then((res) => {

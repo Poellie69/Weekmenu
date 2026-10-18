@@ -87,7 +87,10 @@ function ingredientsFrom(body) {
     .filter(Boolean);
 }
 
-export function createApp({ store, password, secureCookies = false, tls = null, fetchRecipeImpl = fetchRecipe, fetchImageImpl = fetchImage }) {
+// With trustedPeer set, the server only answers that one address and treats
+// every request as signed in. Home Assistant's sidebar (ingress) uses this:
+// Home Assistant has already checked who the user is.
+export function createApp({ store, password, secureCookies = false, tls = null, trustedPeer = null, fetchRecipeImpl = fetchRecipe, fetchImageImpl = fetchImage }) {
   const sign = (expires) => crypto.createHmac('sha256', store.secret).update(`session:${expires}`).digest('hex');
   const makeToken = () => {
     const expires = Date.now() + SESSION_DAYS * 864e5;
@@ -97,6 +100,7 @@ export function createApp({ store, password, secureCookies = false, tls = null, 
     const [exp, sig] = String(t || '').split('.');
     return Number(exp) > Date.now() && safeEqual(sig, sign(exp));
   };
+  const signedIn = (req) => Boolean(trustedPeer) || validToken(parseCookies(req)[COOKIE]);
   const cookie = (value, maxAge) =>
     `${COOKIE}=${value}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${secureCookies ? '; Secure' : ''}`;
 
@@ -130,7 +134,7 @@ export function createApp({ store, password, secureCookies = false, tls = null, 
   async function api(req, res, url) {
     const route = `${req.method} ${url.pathname}`;
 
-    if (route === 'GET /api/session') return send(res, 200, { loggedIn: validToken(parseCookies(req)[COOKIE]) });
+    if (route === 'GET /api/session') return send(res, 200, { loggedIn: signedIn(req), ingress: Boolean(trustedPeer) });
 
     if (route === 'POST /api/login') {
       const ip = req.socket.remoteAddress;
@@ -149,7 +153,7 @@ export function createApp({ store, password, secureCookies = false, tls = null, 
 
     if (route === 'POST /api/logout') return send(res, 200, { ok: true }, { 'set-cookie': cookie('', 0) });
 
-    if (!validToken(parseCookies(req)[COOKIE])) throw new HttpError(401, 'Please sign in.');
+    if (!signedIn(req)) throw new HttpError(401, 'Please sign in.');
 
     if (route === 'GET /api/state') {
       return send(res, 200, { recipes: store.listRecipes(), week: store.getWeek(), sources: store.getSources() });
@@ -209,9 +213,10 @@ export function createApp({ store, password, secureCookies = false, tls = null, 
   const handler = async (req, res) => {
     const url = new URL(req.url, 'http://local');
     try {
+      if (trustedPeer && req.socket.remoteAddress?.replace(/^::ffff:/, '') !== trustedPeer) throw new HttpError(403, 'Forbidden.');
       if (url.pathname.startsWith('/api/')) return await api(req, res, url);
       if (url.pathname.startsWith('/photos/')) {
-        if (!validToken(parseCookies(req)[COOKIE])) throw new HttpError(401, 'Please sign in.');
+        if (!signedIn(req)) throw new HttpError(401, 'Please sign in.');
         const file = store.photoPath(url.pathname.slice('/photos/'.length));
         if (!file) throw new HttpError(404, 'Not found.');
         return await serveFile(res, file, 'private, max-age=31536000, immutable');
@@ -233,7 +238,7 @@ export function createApp({ store, password, secureCookies = false, tls = null, 
 /** Starts Weekmenu from environment settings (see DOCS.md). */
 export async function main(env = process.env) {
   const password = env.APP_PASSWORD;
-  if (!password) {
+  if (!password && !env.INGRESS_PORT) {
     console.error('Set APP_PASSWORD before starting Weekmenu.');
     process.exit(1);
   }
@@ -247,6 +252,16 @@ export async function main(env = process.env) {
     }
   }
   const store = await new Store(env.DATA_DIR || path.join(ROOT, 'data')).open();
+  if (env.INGRESS_PORT) {
+    const trustedPeer = env.INGRESS_PEER || '172.30.32.2';
+    createApp({ store, password, trustedPeer }).listen(Number(env.INGRESS_PORT), () =>
+      console.log('Weekmenu is available in the Home Assistant sidebar'),
+    );
+  }
+  if (!password) {
+    console.log('No password set, so Weekmenu only opens from the Home Assistant sidebar.');
+    return;
+  }
   const port = Number(env.PORT || 3000);
   const secureCookies = Boolean(tls) || (env.COOKIE_SECURE !== 'false' && env.NODE_ENV === 'production');
   createApp({ store, password, secureCookies, tls }).listen(port, () =>

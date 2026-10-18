@@ -10,7 +10,7 @@ const OPTIONS = process.env.HA_OPTIONS_FILE || '/data/options.json';
 const SSL_DIR = process.env.HA_SSL_DIR || '/ssl';
 
 export function envFromOptions(options, env) {
-  const out = { ...env, DATA_DIR: path.dirname(OPTIONS), PORT: '3000' };
+  const out = { ...env, DATA_DIR: path.dirname(OPTIONS), PORT: '3000', INGRESS_PORT: '8099' };
   if (options.password) out.APP_PASSWORD = String(options.password);
   if (options.ssl) {
     out.SSL_CERT = path.join(SSL_DIR, options.certfile || 'fullchain.pem');
@@ -21,11 +21,6 @@ export function envFromOptions(options, env) {
 
 let env = process.env;
 if (fs.existsSync(OPTIONS)) {
-  const options = JSON.parse(fs.readFileSync(OPTIONS, 'utf8'));
-  if (!options.password) {
-    console.error('Weekmenu needs a password. Set one on the add-on Configuration tab, then start the add-on again.');
-    process.exit(1);
-  }
-  env = envFromOptions(options, process.env);
+  env = envFromOptions(JSON.parse(fs.readFileSync(OPTIONS, 'utf8')), process.env);
 }
 await main(env);
